@@ -1,0 +1,7 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3101:3101"
+    environment:
+      PORT: 3101

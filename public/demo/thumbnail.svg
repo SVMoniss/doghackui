@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
+  <rect width="800" height="450" fill="#18181b"/>
+  <circle cx="400" cy="180" r="90" fill="none" stroke="#bef264" stroke-width="10"/>
+  <circle cx="400" cy="180" r="30" fill="#bef264"/>
+  <rect x="120" y="320" width="560" height="26" rx="13" fill="#3f3f46"/>
+  <rect x="120" y="320" width="380" height="26" rx="13" fill="#bef264"/>
+  <text x="400" y="395" text-anchor="middle" font-family="monospace" font-size="24" fill="#a1a1aa">RackFinder Mini · demo thumbnail</text>
+</svg>

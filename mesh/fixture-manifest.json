@@ -1,0 +1,273 @@
+{
+  "schemaVersion": "1.0",
+  "submissionId": "55555555-0000-0000-0000-000000000001",
+  "eventId": "11111111-1111-1111-1111-111111111111",
+  "projectId": "mesh-demo",
+  "teamId": "77777777-7777-7777-7777-777777777777",
+  "sealedAt": "2026-09-20T06:07:04.765Z",
+  "merkleRoot": "480dcb5c69eead16a91b768240e4e03bf2116bdad0dcaeedcde4472f115158e8",
+  "attestation": {
+    "algorithm": "ed25519",
+    "publicKeyId": "50ff69ae05837ad5",
+    "signature": "17e8d3e1407e0d84f5a7a2ecbd91b59114b762aa2904922791b2c1fa23e5cf155c20e5589d8493aec7450e2d88de3fa7f9360fd29248583e8b5fa1fff808030a",
+    "agentVersion": "mesh/0.1.0"
+  },
+  "claims": [
+    {
+      "id": "core_flow_runs",
+      "statement": "The project's core flow starts and serves its declared entry point.",
+      "category": "core_functionality",
+      "expectedEvidence": [
+        "replay_capsule"
+      ],
+      "evidenceRefs": [
+        "replay_capsule_001",
+        "interaction_trace_attached_783747fa"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "offline_operation",
+      "statement": "The project declares no external network dependencies.",
+      "category": "deployment",
+      "expectedEvidence": [
+        "replay_capsule"
+      ],
+      "evidenceRefs": [
+        "replay_capsule_001"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "dependency_review",
+      "statement": "Direct dependencies are declared and reviewable (0 direct).",
+      "category": "security",
+      "expectedEvidence": [
+        "dependency_graph",
+        "security_scan"
+      ],
+      "evidenceRefs": [
+        "dependency_graph_001"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "test_coverage_claim",
+      "statement": "1 test file(s) are linked to source modules.",
+      "category": "core_functionality",
+      "expectedEvidence": [
+        "test_report"
+      ],
+      "evidenceRefs": [
+        "test_report_001"
+      ],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "impact_statement",
+      "statement": "EDIT ME: who benefits and what measurable outcome is expected.",
+      "category": "impact",
+      "expectedEvidence": [
+        "documentation_snapshot"
+      ],
+      "evidenceRefs": [
+        "documentation_snapshot_001",
+        "spatial_demo_scene_attached_28431e9d"
+      ],
+      "status": "UNVERIFIED"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "ast_snapshot_001",
+      "kind": "ast_snapshot",
+      "contentHash": "6c7371fb011978aaf6bc72452e47b8f40bed1253b53946e6dde7b212bff1ba00",
+      "uri": "mesh-agent:ast_snapshot/6c7371fb0119",
+      "createdAt": "2026-09-20T06:07:04.764Z",
+      "provenance": {
+        "producer": "mesh-agent",
+        "trusted": true
+      }
+    },
+    {
+      "id": "dependency_graph_001",
+      "kind": "dependency_graph",
+      "contentHash": "7e8a17428cdbd362b580afa6781b57915d8e3f677150646de58adbce99d9c199",
+      "uri": "mesh-agent:dependency_graph/7e8a17428cdb",
+      "createdAt": "2026-09-20T06:07:04.765Z",
+      "provenance": {
+        "producer": "mesh-agent",
+        "trusted": true
+      }
+    },
+    {
+      "id": "replay_capsule_001",
+      "kind": "replay_capsule",
+      "contentHash": "c1c3a38be4ee6a7121e82f9cd9f3f1eb85c3b37371bcfe8a13d864fb4a43367f",
+      "uri": "mesh-agent:replay_capsule/c1c3a38be4ee",
+      "createdAt": "2026-09-20T06:07:04.765Z",
+      "provenance": {
+        "producer": "mesh-agent",
+        "trusted": true
+      }
+    },
+    {
+      "id": "test_report_001",
+      "kind": "test_report",
+      "contentHash": "c40dcec4ee02466c99b5ac8b72c1e2f35818c48c5f4a879cb650512995da137d",
+      "uri": "mesh-agent:test_report/c40dcec4ee02",
+      "createdAt": "2026-09-20T06:07:04.765Z",
+      "provenance": {
+        "producer": "mesh-agent",
+        "trusted": true
+      }
+    },
+    {
+      "id": "documentation_snapshot_001",
+      "kind": "documentation_snapshot",
+      "contentHash": "a81f5db010cf18e589a37cee49879b4d1acac48c66b6e430992d1deef4cdd243",
+      "uri": "mesh-agent:documentation_snapshot/a81f5db010cf",
+      "createdAt": "2026-09-20T06:07:04.765Z",
+      "provenance": {
+        "producer": "mesh-agent",
+        "trusted": true
+      }
+    },
+    {
+      "id": "milestone_sealed_001",
+      "kind": "milestone_attestation",
+      "contentHash": "a5710c31a1453ebc48c8d1af1388fba9b79e8dd443cea11633cfcb4f73d24747",
+      "uri": "mesh-agent:milestone_attestation/a5710c31a145",
+      "createdAt": "2026-09-20T06:07:04.765Z",
+      "provenance": {
+        "producer": "mesh-agent",
+        "trusted": true
+      }
+    },
+    {
+      "id": "interaction_trace_attached_783747fa",
+      "kind": "interaction_trace",
+      "contentHash": "783747fafea89d45d1a5dadc9bbed2a5a6098b41d5650fe7fae437e2ae9e73fb",
+      "uri": "mesh-agent:attached/783747fafea8",
+      "createdAt": "2026-09-20T06:07:04.765Z",
+      "provenance": {
+        "producer": "participant",
+        "trusted": false,
+        "sourceRef": "journey.trace.json",
+        "bytes": 648
+      }
+    },
+    {
+      "id": "spatial_demo_scene_attached_28431e9d",
+      "kind": "spatial_demo_scene",
+      "contentHash": "28431e9d4eafc493a240dd0f3cabdeadaedb09568ef71b53bdef7ddd6e0e1100",
+      "uri": "mesh-agent:attached/28431e9d4eaf",
+      "createdAt": "2026-09-20T06:07:04.765Z",
+      "provenance": {
+        "producer": "participant",
+        "trusted": false,
+        "sourceRef": "scene.json",
+        "bytes": 538
+      }
+    }
+  ],
+  "environment": {
+    "runtime": "docker-compose",
+    "startupCommand": "docker compose up --build",
+    "healthChecks": [
+      {
+        "id": "hc-startup",
+        "kind": "startup",
+        "target": "docker compose up --build",
+        "expectation": "process stays up for 30s"
+      },
+      {
+        "id": "hc-offline",
+        "kind": "offline",
+        "target": "outbound network",
+        "expectation": "no external hosts referenced"
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "cold_start",
+        "title": "Cold start and health check",
+        "steps": [
+          {
+            "id": "st-startup",
+            "kind": "command",
+            "target": "docker compose up --build",
+            "expectation": "exit code 0"
+          }
+        ],
+        "expectedOutcome": "The project starts from a clean checkout and serves its entry point.",
+        "claimRefs": [
+          "core_flow_runs"
+        ]
+      }
+    ],
+    "networkPolicy": "offline"
+  },
+  "policyDeclarations": [
+    {
+      "type": "license",
+      "statement": "A LICENSE file is present."
+    },
+    {
+      "type": "offline_capable",
+      "statement": "No external network dependencies detected."
+    },
+    {
+      "type": "no_secrets_uploaded",
+      "statement": "Manifest carries hashes and structure only. 0 path(s) excluded; no file contents uploaded."
+    },
+    {
+      "type": "privacy",
+      "statement": "No keystrokes, screen activity, secrets, or private repositories were collected."
+    }
+  ],
+  "astGraph": {
+    "nodes": [
+      {
+        "id": "module:src/index.js",
+        "kind": "module",
+        "label": "src/index.js",
+        "sourceRef": "src/index.js#sha256:ceff80320417",
+        "tags": []
+      },
+      {
+        "id": "module:src/routes.js",
+        "kind": "module",
+        "label": "src/routes.js",
+        "sourceRef": "src/routes.js#sha256:6364ebbf7166",
+        "tags": []
+      },
+      {
+        "id": "module:test/routes.test.js",
+        "kind": "test",
+        "label": "test/routes.test.js",
+        "sourceRef": "test/routes.test.js#sha256:5ecb13d3f02b",
+        "tags": [
+          "test"
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": "module:test/routes.test.js",
+        "target": "module:src/routes.js",
+        "kind": "tests"
+      }
+    ]
+  },
+  "dependencyGraph": {
+    "direct": [],
+    "dev": [],
+    "testFrameworks": []
+  },
+  "fileInventory": {
+    "files": 10,
+    "bytes": 3114,
+    "excluded": 0
+  }
+}

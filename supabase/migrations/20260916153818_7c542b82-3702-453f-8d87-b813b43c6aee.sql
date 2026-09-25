@@ -1,0 +1,2 @@
+ALTER TABLE public.assignments ADD COLUMN IF NOT EXISTS targeted boolean NOT NULL DEFAULT false;
+CREATE INDEX IF NOT EXISTS assignments_targeted_idx ON public.assignments (event_id, targeted) WHERE targeted;

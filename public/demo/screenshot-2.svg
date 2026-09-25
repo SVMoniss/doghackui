@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
+  <rect width="800" height="450" fill="#27272a"/>
+  <rect x="60" y="60" width="680" height="120" rx="12" fill="#18181b" stroke="#bef264" stroke-width="3"/>
+  <text x="100" y="135" font-family="monospace" font-size="26" fill="#bef264">offline · tiles cached · 0 network calls</text>
+  <rect x="60" y="220" width="680" height="120" rx="12" fill="#18181b" stroke="#52525b" stroke-width="3"/>
+  <text x="100" y="295" font-family="monospace" font-size="26" fill="#e4e4e7">photo verified ✓ published to map</text>
+  <text x="60" y="420" font-family="monospace" font-size="22" fill="#a1a1aa">shot 2 · offline badge + verification</text>
+</svg>

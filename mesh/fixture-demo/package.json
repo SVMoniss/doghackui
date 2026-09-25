@@ -1,0 +1,12 @@
+{
+  "name": "mesh-demo",
+  "version": "0.1.0",
+  "description": "Fixture project used to demonstrate the OpenJudge Mesh evidence pipeline.",
+  "license": "MIT",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test test/"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

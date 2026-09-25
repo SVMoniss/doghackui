@@ -1,0 +1,9 @@
+{
+  "scene": "Cold start, annotated",
+  "regions": [
+    { "id": "terminal", "label": "docker compose up --build", "anchor": "startupCommand", "cue": "Watch the health check turn green" },
+    { "id": "browser", "label": "/health endpoint", "anchor": "hc-startup", "cue": "Before: connection refused. After: HTTP 200 with {ok:true}" }
+  ],
+  "dataFlow": ["compose build", "seed fixtures", "health check", "scenario cold_start"],
+  "narration": ["Start from a clean checkout", "Enter at the health check, not at minute zero of a video"]
+}

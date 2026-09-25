@@ -1,0 +1,11 @@
+{
+  "journey": "First visit to organism health",
+  "recordedAt": "2026-09-20T12:00:00Z",
+  "events": [
+    { "seq": 1, "action": "navigate", "url": "/health", "api": null, "status": 200, "note": "Landing response in 40ms" },
+    { "seq": 2, "action": "click", "url": "/organisms", "api": "GET /organisms", "status": 200, "note": "List renders one demo organism" },
+    { "seq": 3, "action": "keyboard", "url": "/organisms", "api": null, "status": null, "note": "Tab order reaches the list without a pointer" }
+  ],
+  "console": ["mesh-demo listening on 3101"],
+  "accessibilityTree": ["heading: Mesh Demo", "list: 1 organism", "status: healthy"]
+}
