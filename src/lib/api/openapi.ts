@@ -96,8 +96,20 @@ export const OPENAPI = {
         responses: { "200": { description: "Project" }, "404": { description: "Not found" } },
       },
     },
-    "/api/reviews": {
-      post: {
+    "/api/judge/scores": {
+      get: {
+        summary: "Own judging scores (401 anonymous, 403 for peers or non-judges; ?judge= scopes one judge)",
+        parameters: [{ name: "judge", in: "query", required: false, schema: { type: "string" } }],
+        responses: { "200": { description: "Own reviews with per-criterion scores" }, "401": { description: "Sign in required" }, "403": { description: "Not your scores" } },
+      },
+    },
+    "/api/export.csv": {
+      get: {
+        summary: "Per-review CSV export (organizers only)",
+        responses: { "200": { description: "CSV body" }, "403": { description: "Organizers only" } },
+      },
+    },
+    "/api/reviews": {      post: {
         summary: "Save a draft or submit a review (ownership, ranges, and track scope enforced)",
         requestBody: {
           required: true,

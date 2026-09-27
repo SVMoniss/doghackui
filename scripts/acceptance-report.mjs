@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 /**
- * Generates acceptance-report.txt: the automated acceptance suite record.
+ * Extended self-check: typecheck, per-file unit tests, and browser e2e
+ * against E2E_BASE_URL. Writes acceptance-report.full.txt (supplement).
  *
- * Runs typecheck, unit tests, and browser e2e against E2E_BASE_URL, then
- * writes versions, timings, pass/fail counts, and honest gap notes.
+ * The official acceptance-report.txt is the output of the organizers'
+ * run.py and must never be overwritten by this script:
+ *   python3 run.py .dogfood.toml --fixtures ./fixtures.json > acceptance-report.txt
  *
- * Usage: E2E_BASE_URL=http://localhost:3000 npm run test:acceptance
+ * Usage: E2E_BASE_URL=http://localhost:3000 SKIP_TSC=1 npm run test:acceptance
  */
 import { execSync } from "node:child_process";
 import { readdirSync, writeFileSync } from "node:fs";
@@ -113,5 +115,5 @@ log("- No email delivery for team invites (links are copy-paste).");
 log("- Full-project tsc needs a bigger machine (SKIP_TSC=1 locally); production vite build + per-file suites verify instead.");
 log("");
 log(`overall: ${failures === 0 ? "PASS" : "FAIL"}`);
-writeFileSync("acceptance-report.txt", `${lines.join("\n")}\n`);
+writeFileSync("acceptance-report.full.txt", `${lines.join("\n")}\n`);
 process.exit(failures === 0 ? 0 : 1);

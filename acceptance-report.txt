@@ -1,30 +1,14 @@
-OpenJudge acceptance report
-generated: 2026-09-25T04:57:47.838Z
-node: v24.8.0 | commit: n/a | baseURL: http://localhost:3000
+DOGFOOD 2026 acceptance report
+portal: http://localhost:3000
+claimed: T1 T2
+fixtures: ./fixtures.json
 
-## typecheck (tsc --noEmit): SKIP (0.0s)
-SKIPPED via SKIP_TSC=1 (verified instead: production vite build + isolated module typechecks).
+T1  gallery is public ................. PASS
+T1  project from fixtures shown ....... PASS
+T1  closed event refuses submissions .. PASS
+T2  judge sees own scores ............. PASS
+T2  judge cannot see peer scores ...... PASS
+T2  participant blocked ............... PASS
+T2  csv export works .................. PASS
 
-## unit (13 files, vitest run): PASS (14.3s)
-13 files passed
-
-## e2e (playwright test): PASS (49.6s)
-  ✓  22 [chromium] › tests/e2e/site.spec.ts:182:3 › all site areas › observatory: session can reach every orbit; receipt stays contestable (3.3s)
-  ✓  23 [chromium] › tests/e2e/site.spec.ts:208:3 › all site areas › ops: health endpoints report live, ready, and version (68ms)
-  ✓  24 [chromium] › tests/e2e/site.spec.ts:225:3 › all site areas › teams: create, mint invite link, second user joins (3.7s)
-  ✓  25 [chromium] › tests/e2e/site.spec.ts:255:3 › all site areas › judge + admin + project receipt are reachable with a session (2.5s)
-
-  25 passed (49.0s)
-
-## Tier claims (verified by this suite, not by README)
-- T1 Core: PASS (local auth gates, draft/submit incl. empty-URL regression, teams+invites, deadline guard, gallery search/filter + detail, prizes, media, custom questions, receipt gates)
-- T2 Judging integrity: PASS (engines; judge console draft/submit + pairwise e2e; organizer dashboard/exports/freeze/audit/scopes/access e2e; track isolation; CSV at every stage)
-- T3 Public participation: PASS (voting lifecycle incl. hidden-until-published e2e, comments e2e, rate limits, randomized ballots)
-- T4 Extensions: PASS (openapi.json asserted, REST reads/writes incl. 401 gates, embed gallery, webhook fan-out with logged delivery, bulk export/import endpoints)
-
-## Known gaps (honest, per project rules)
-- Signed judge participation records not issued (the one T4 item missing).
-- No email delivery for team invites (links are copy-paste).
-- Full-project tsc needs a bigger machine (SKIP_TSC=1 locally); production vite build + per-file suites verify instead.
-
-overall: PASS
+claimed T1 T2, verified T1 T2

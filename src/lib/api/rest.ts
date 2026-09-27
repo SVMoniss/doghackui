@@ -314,8 +314,7 @@ export async function handleApi(request: Request): Promise<Response | null> {
     }
 
     // ----- organizer reads/writes -----
-    if (request.method === "GET" && segments[0] === "leaderboard") {
-      const gate = await organizerOr401(request);
+    if (request.method === "GET" && segments[0] === "leaderboard") {      const gate = await organizerOr401(request);
       if (gate instanceof Response) return gate;
       const eventId = url.searchParams.get("eventId") ?? "";
       if (!UUID_RE.test(eventId)) return json({ error: "eventId is required." }, 400);
@@ -375,6 +374,125 @@ export async function handleApi(request: Request): Promise<Response | null> {
       }
       await logAudit({ eventId: body.eventId, actor: gate.id, action: "submission.imported", entity: "submissions", detail: { created: ids.length } });
       return json({ created: ids.length, ids }, 201);
+    }
+
+    // ----- judge scores (acceptance T2: own 200, peer 401/403) -----
+    if (segments[0] === "judge" && segments[1] === "scores") {
+      if (request.method !== "GET") return json({ error: "Method not allowed." }, 405);
+      const user = await authedUser(request);
+      if (!user) return json({ error: "Authentication required." }, 401);
+      const pool = meshPool();
+      const { rows: myJudges } = await pool.query(
+        "select id, event_id, display_name from public.judges where user_id = $1",
+        [user.id],
+      );
+      const mine = myJudges as { id: string; event_id: string; display_name: string }[];
+      const target = url.searchParams.get("judge");
+      let judgeId: string;
+      if (target) {
+        // Resolve by row id or by email; anything else is refused, never leaked.
+        const { rows } = await pool.query(
+          "select id, event_id, display_name from public.judges where id::text = $1 or email = $2",
+          [target, target],
+        );
+        const row = rows[0] as { id: string; event_id: string; display_name: string } | undefined;
+        if (!row) return json({ error: "Forbidden: unknown judge scope." }, 403);
+        const isMine = mine.some((j) => j.id === row.id);
+        if (!isMine) {
+          const { rows: roleRows } = await pool.query(
+            "select 1 from public.user_roles where user_id = $1 and role in ('organizer', 'admin')",
+            [user.id],
+          );
+          if (roleRows.length === 0) return json({ error: "Forbidden: not your scores." }, 403);
+        }
+        judgeId = row.id;
+      } else {
+        if (mine.length === 0) return json({ error: "Forbidden: judging role required." }, 403);
+        judgeId = mine[0]!.id;
+      }
+      const { rows: assignments } = await pool.query(
+        `select a.id, a.status, a.comment, a.submitted_at, s.id as submission_id, s.title, s.team_name
+         from public.assignments a join public.submissions s on s.id = a.submission_id
+         where a.judge_id = $1 order by a.created_at asc`,
+        [judgeId],
+      );
+      const ids = (assignments as { id: string }[]).map((a) => a.id);
+      let scoreRows: { assignment_id: string; criterion_id: string; value: string | number }[] = [];
+      if (ids.length > 0) {
+        const { rows } = await pool.query(
+          "select assignment_id, criterion_id, value from public.scores where assignment_id = any ($1)",
+          [ids],
+        );
+        scoreRows = rows as typeof scoreRows;
+      }
+      const { rows: criteria } = await pool.query(
+        "select c.id, c.name from public.criteria c join public.assignments a on a.event_id = c.event_id where a.judge_id = $1 group by c.id, c.name, c.position order by min(c.position)",
+        [judgeId],
+      );
+      const names = Object.fromEntries(
+        (criteria as { id: string; name: string }[]).map((c) => [c.id, c.name]),
+      );
+      return json({
+        judgeId,
+        reviews: (assignments as Record<string, unknown>[]).map((a) => ({
+          assignmentId: a["id"],
+          status: a["status"],
+          comment: a["comment"],
+          submissionId: a["submission_id"],
+          title: a["title"],
+          teamName: a["team_name"],
+          scores: scoreRows
+            .filter((s) => s.assignment_id === a["id"])
+            .map((s) => ({
+              criterionId: s.criterion_id,
+              criterion: names[s.criterion_id] ?? s.criterion_id,
+              value: Number(s.value),
+            })),
+        })),
+      });
+    }
+
+    // ----- CSV export (acceptance T2: organizer, CSV body) -----
+    if (request.method === "GET" && segments[0] === "export.csv") {
+      const gate = await organizerOr401(request);
+      if (gate instanceof Response) return gate;
+      const eventIdParam = url.searchParams.get("eventId");
+      const pool = meshPool();
+      const eventId = eventIdParam ?? await pool.query("select id from public.events order by created_at asc limit 1").then((r) => (r.rows[0] as { id: string } | undefined)?.id ?? "");
+      if (!eventId) return json({ error: "No event found." }, 404);
+      const { loadEventReviews } = await import("../review-data");
+      const loaded = await loadEventReviews(eventId);
+      const { normalizeScores: normalize, weightedTotal: total } = await import("../engine/normalize");
+      const normalized = normalize({
+        criteria: loaded.criteria,
+        reviews: loaded.reviews,
+        submissionIds: loaded.submissions.map((s) => s.id),
+        minReviews: loaded.event.reviews_per_submission,
+      });
+      const normByPair = new Map<string, number>();
+      for (const row of normalized.rows) {
+        for (const review of row.reviews) {
+          normByPair.set(`${review.judgeId}::${row.submissionId}`, review.normalizedTotal);
+        }
+      }
+      const judges = Object.fromEntries(loaded.judges.map((j) => [j.id, j.display_name]));
+      const submissions = Object.fromEntries(loaded.submissions.map((s) => [s.id, `${s.title} (${s.team_name})`]));
+      const { toCsvRows } = await import("../engine/export-csv");
+      const header = ["judge", "project", ...loaded.criteria.map((c) => c.name ?? "criterion"), "raw_total", "normalized_total"];
+      const csv = toCsvRows(
+        header,
+        loaded.reviews.map((review) => [
+          judges[review.judgeId] ?? review.judgeId,
+          submissions[review.submissionId] ?? review.submissionId,
+          ...loaded.criteria.map((criterion) => review.scores[criterion.id] ?? ""),
+          total(review, loaded.criteria).toFixed(2),
+          (normByPair.get(`${review.judgeId}::${review.submissionId}`) ?? 0).toFixed(2),
+        ]),
+      );
+      return new Response(csv, {
+        status: 200,
+        headers: { "content-type": "text/csv; charset=utf-8" },
+      });
     }
 
     return json({ error: "Unknown API route. See /api/openapi.json." }, 404);

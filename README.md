@@ -124,9 +124,10 @@ robustness certificate (see `src/lib/engine/scoring.ts`).
 ## Tests
 
 ```sh
-npx vitest run                              # engines + validation (93 tests)
-E2E_BASE_URL=http://localhost:3000 npx playwright test   # browser flows (21 tests)
-npm run test:acceptance                     # typecheck + unit + e2e -> acceptance-report.txt
+npx vitest run                              # engines + validation
+E2E_BASE_URL=http://localhost:3000 npx playwright test   # browser flows (32 tests)
+npm run test:acceptance                     # extended self-check -> acceptance-report.full.txt
+python3 run.py .dogfood.toml --fixtures ./fixtures.json > acceptance-report.txt  # official report
 ```
 
 ## Documentation
