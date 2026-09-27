@@ -96,8 +96,7 @@ export const OPENAPI = {
         responses: { "200": { description: "Project" }, "404": { description: "Not found" } },
       },
     },
-    "/api/judge/scores": {
-      get: {
+    "/api/judge/scores": {      get: {
         summary: "Own judging scores (401 anonymous, 403 for peers or non-judges; ?judge= scopes one judge)",
         parameters: [{ name: "judge", in: "query", required: false, schema: { type: "string" } }],
         responses: { "200": { description: "Own reviews with per-criterion scores" }, "401": { description: "Sign in required" }, "403": { description: "Not your scores" } },
@@ -107,6 +106,14 @@ export const OPENAPI = {
       get: {
         summary: "Per-review CSV export (organizers only)",
         responses: { "200": { description: "CSV body" }, "403": { description: "Organizers only" } },
+      },
+    },
+    "/api/verify-participation/{id}": {
+      get: {
+        summary: "Verify a signed judge participation record (public, no ballot data)",
+        security: [],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+        responses: { "200": { description: "{valid, record, publicKey}" }, "404": { description: "Not found" } },
       },
     },
     "/api/reviews": {      post: {

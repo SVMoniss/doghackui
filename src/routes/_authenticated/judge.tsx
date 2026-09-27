@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { myQueue, saveReview } from "@/lib/judge.functions";
+import { myParticipation, myQueue, saveReview } from "@/lib/judge.functions";
 import { castPairwiseVote, pairwisePair } from "@/lib/mesh/pairwise.functions";
 
 export const Route = createFileRoute("/_authenticated/judge")({
@@ -118,6 +118,8 @@ function JudgePage() {
 
       <PairwiseDuel eventId={data.judge.event_id} />
 
+      <ParticipationRecords />
+
       <div className="mt-9 grid gap-6 lg:grid-cols-[320px_1fr]">
         <ul className="space-y-2">
           {data.assignments.map((assignment) => (
@@ -224,6 +226,44 @@ function PairwiseDuel({ eventId }: { eventId: string }) {
             </Button>
           </div>
         ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * Signed participation records: one per submitted review, publicly
+ * verifiable at /api/verify-participation/:id without leaking ballots.
+ */
+function ParticipationRecords() {
+  const fetchRecords = useServerFn(myParticipation);
+  const records = useQuery({ queryKey: ["participation"], queryFn: () => fetchRecords() });
+  const rows = records.data ?? [];
+  if (records.isLoading || rows.length === 0) return null;
+  return (
+    <Card className="mt-6">
+      <CardHeader>
+        <CardTitle className="text-base">Participation records</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ul className="space-y-1 text-sm">
+          {rows.map((row) => (
+            <li key={row.id} className="flex flex-wrap items-center gap-2">
+              <span className="font-medium">{row.title}</span>
+              <span className="font-mono text-xs text-muted-foreground">
+                {new Date(row.submitted_at).toLocaleString()}
+              </span>
+              <a
+                className="font-mono text-xs underline underline-offset-4"
+                href={`/api/verify-participation/${row.id}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                verify signature
+              </a>
+            </li>
+          ))}
+        </ul>
       </CardContent>
     </Card>
   );

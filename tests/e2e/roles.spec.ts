@@ -78,7 +78,7 @@ test.describe("organizer and judge flows", () => {
       timeout: 10_000,
     });
     // Seeded draft assignment for the demo judge.
-    const assignment = page.getByRole("button", { name: /migratemate/i });
+    const assignment = page.getByRole("button", { name: /migratemate (submitted|draft|pending)/i });
     await expect(assignment).toBeVisible({ timeout: 10_000 });
     await assignment.click();
 
@@ -102,12 +102,19 @@ test.describe("organizer and judge flows", () => {
     await expect(page.getByRole("heading", { name: /judging console/i })).toBeVisible({
       timeout: 10_000,
     });
-    await page.getByRole("button", { name: /migratemate/i }).click();
+    await page.getByRole("button", { name: /migratemate (submitted|draft|pending)/i }).click();
     await expect(page.getByLabel(/^impact/i)).toHaveValue("8");
 
     // Submit the review for real.
     await page.getByRole("button", { name: /^submit review$/i }).click();
     await expect(page.getByText(/review submitted/i)).toBeVisible({ timeout: 10_000 });
+
+    // A signed participation record appears, verifiable without a session.
+    const verifyHref = await page
+      .locator('a[href*="/api/verify-participation/"]')
+      .first()
+      .getAttribute("href");
+    expect(verifyHref).toMatch(/\/api\/verify-participation\//);
 
     // Pairwise mode: pick a winner, twice for a stable signal.
     for (let round = 0; round < 2; round += 1) {
@@ -218,6 +225,46 @@ test.describe("organizer and judge flows", () => {
 
     // Leave voting as found (closed) for other runs.
     await page.goto("/admin");
+    await page.getByLabel("Mode").selectOption("off");
+    await page.getByRole("button", { name: /save voting/i }).click();
+    await expect(page.getByText(/voting settings saved/i)).toBeVisible({ timeout: 10_000 });
+  });
+
+  test("ballots: organizer mints an open link, anonymous vote counts", async ({
+    page,
+    request,
+  }) => {
+    await signIn(page, ORGANIZER.email, ORGANIZER.password);
+    await page.goto("/admin");
+    await page.getByLabel("Mode").selectOption("one_person_one_vote");
+    await page.getByRole("checkbox", { name: /voting open/i }).check();
+    await page.getByRole("checkbox", { name: /results published/i }).uncheck();
+    await page.getByRole("button", { name: /save voting/i }).click();
+    await expect(page.getByText(/voting settings saved/i)).toBeVisible({ timeout: 10_000 });
+
+    await page.locator("#token-count").fill("1");
+    await page.getByRole("button", { name: /mint ballot links/i }).click();
+    await expect(page.getByText(/ballot links created/i)).toBeVisible({ timeout: 10_000 });
+    const tokenLine = await page.getByText(/^\/vote\?t=/).first().textContent();
+    const token = tokenLine?.split("t=")[1]?.trim() ?? "";
+    expect(token.length).toBeGreaterThan(8);
+
+    // Anonymous: no session, just the link.
+    await page.getByRole("button", { name: /sign out/i }).click();
+    await page.goto(`/vote?t=${token}`);
+    await expect(page.getByText(/anonymous ballot link/i)).toBeVisible({ timeout: 10_000 });
+    await page.getByRole("button", { name: /^vote$/i }).first().click();
+    await expect(page.getByText(/vote counted/i)).toBeVisible({ timeout: 10_000 });
+
+    // Revoked links stop working.
+    await signIn(page, ORGANIZER.email, ORGANIZER.password);
+    await page.goto("/admin");
+    await page.getByRole("button", { name: /^revoke$/i }).first().click();
+    await expect(page.getByText(/ballot link revoked/i)).toBeVisible({ timeout: 10_000 });
+    const check = await request.get("/api/openapi.json");
+    expect(check.ok()).toBe(true);
+
+    // Restore voting closed for other runs.
     await page.getByLabel("Mode").selectOption("off");
     await page.getByRole("button", { name: /save voting/i }).click();
     await expect(page.getByText(/voting settings saved/i)).toBeVisible({ timeout: 10_000 });

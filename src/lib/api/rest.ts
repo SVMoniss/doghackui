@@ -248,8 +248,23 @@ export async function handleApi(request: Request): Promise<Response | null> {
       if (data.submit) {
         await logAudit({ eventId: assignment.event_id, actor: user.id, action: "review.submitted", entity: "assignments", entityId: data.assignmentId });
         await triggerWebhooks("review.submitted", { eventId: assignment.event_id, assignmentId: data.assignmentId, submissionId: assignment.submission_id });
+        const { issueParticipationRecord } = await import("../mesh/participation");
+        await issueParticipationRecord({
+          judgeId: assignment.judge_id,
+          eventId: assignment.event_id,
+          submissionId: assignment.submission_id,
+          assignmentId: data.assignmentId,
+        });
       }
       return json({ ok: true, status: data.submit ? "submitted" : "draft" });
+    }
+
+    // ----- participation record verification (public) -----
+    if (request.method === "GET" && segments[0] === "verify-participation" && segments[1] && UUID_RE.test(segments[1])) {
+      const { verifyParticipationRecord } = await import("../mesh/participation");
+      const result = await verifyParticipationRecord(segments[1] as string);
+      if (!result.record) return json({ error: "Record not found." }, 404);
+      return json({ valid: result.valid, record: result.record, publicKey: result.publicKey });
     }
 
     if (request.method === "POST" && segments[0] === "votes" && segments.length === 1) {

@@ -8,9 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getEventOverview } from "@/lib/hackathon.functions";
-import { ballot, castVote, standings } from "@/lib/mesh/community.functions";
+import { ballot, castTokenVote, castVote, standings, tokenBallot } from "@/lib/mesh/community.functions";
 
 export const Route = createFileRoute("/vote")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    t: typeof search["t"] === "string" ? (search["t"] as string) : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Community vote — OpenJudge" },
@@ -24,18 +27,40 @@ export const Route = createFileRoute("/vote")({
 });
 
 function VotePage() {
+  const { t: tokenParam } = Route.useSearch();
   const queryClient = useQueryClient();
   const fetchOverview = useServerFn(getEventOverview);
   const fetchBallot = useServerFn(ballot);
   const vote = useServerFn(castVote);
+  const fetchTokenBallot = useServerFn(tokenBallot);
+  const voteByToken = useServerFn(castTokenVote);
   const fetchStandings = useServerFn(standings);
   const overview = useQuery({ queryKey: ["event-overview"], queryFn: () => fetchOverview() });
   const eventId = overview.data?.event.id ?? null;
   const [votes, setVotes] = useState<Record<string, number>>({});
+  // Anonymous ballot links (?t=) work with no account; remembered locally.
+  const [token] = useState<string | null>(() => {
+    if (tokenParam) {
+      try {
+        localStorage.setItem("ballot-token", tokenParam);
+      } catch {
+        // Private mode: the link still works for this visit.
+      }
+      return tokenParam;
+    }
+    try {
+      return localStorage.getItem("ballot-token");
+    } catch {
+      return null;
+    }
+  });
 
   const ballotQuery = useQuery({
-    queryKey: ["ballot", eventId],
-    queryFn: () => fetchBallot({ data: { eventId: eventId! } }),
+    queryKey: ["ballot", eventId, token ?? "session"],
+    queryFn: () =>
+      token && eventId
+        ? fetchTokenBallot({ data: { eventId, token } })
+        : fetchBallot({ data: { eventId: eventId! } }),
     enabled: eventId !== null,
     retry: false,
   });
@@ -48,7 +73,9 @@ function VotePage() {
 
   const voteMutation = useMutation({
     mutationFn: (input: { submissionId: string; votes: number }) =>
-      vote({ data: { eventId: eventId!, submissionId: input.submissionId, votes: input.votes } }),
+      token && eventId
+        ? voteByToken({ data: { eventId, token, submissionId: input.submissionId, votes: input.votes } })
+        : vote({ data: { eventId: eventId!, submissionId: input.submissionId, votes: input.votes } }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ballot"] });
       queryClient.invalidateQueries({ queryKey: ["standings"] });
@@ -58,13 +85,38 @@ function VotePage() {
   });
 
   if (ballotQuery.error) {
+    const message = (ballotQuery.error as Error).message;
+    const needsToken = token && /token/i.test(message);
     return (
       <div className="mx-auto max-w-3xl px-5 py-14">
         <h1 className="text-3xl font-bold tracking-tight">Community vote</h1>
         <p className="mt-3 text-sm text-muted-foreground">
-          {(ballotQuery.error as Error).message} — <Link to="/auth" className="underline">sign in</Link> to
-          vote.
+          {needsToken ? (
+            <>This ballot link is invalid or revoked. Ask an organizer for a fresh one.</>
+          ) : (
+            <>
+              {message} — <Link to="/auth" className="underline">sign in</Link> to vote, or open a
+              ballot link from an organizer.
+            </>
+          )}
         </p>
+        {token && !needsToken && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="mt-4"
+            onClick={() => {
+              try {
+                localStorage.removeItem("ballot-token");
+              } catch {
+                // Ignore.
+              }
+              window.location.href = "/vote";
+            }}
+          >
+            Forget this ballot link
+          </Button>
+        )}
       </div>
     );
   }
@@ -83,6 +135,11 @@ function VotePage() {
     <div className="mx-auto max-w-3xl space-y-8 px-5 py-14">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Community vote</h1>
+        {token && (
+          <p className="mt-1 font-mono text-xs text-muted-foreground">
+            Voting with an anonymous ballot link — no account needed.
+          </p>
+        )}
         <p className="mt-2 text-sm text-muted-foreground">
           {!config || config.mode === "off" || !config.open
             ? "Community voting is currently closed."

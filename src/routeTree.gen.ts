@@ -13,10 +13,12 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ProjectsRouteImport } from './routes/projects'
+import { Route as VoteRouteImport } from './routes/vote'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedJudgeRouteImport } from './routes/_authenticated/judge'
 import { Route as AuthenticatedObservatoryRouteImport } from './routes/_authenticated/observatory'
 import { Route as AuthenticatedSubmitRouteImport } from './routes/_authenticated/submit'
+import { Route as EmbedGalleryRouteImport } from './routes/embed.gallery'
 import { Route as OrganismsSubmissionIdRouteImport } from './routes/organisms.$submissionId'
 import { Route as ProjectsIdRouteImport } from './routes/projects.$id'
 import { Route as AuthenticatedReceiptProjectIdRouteImport } from './routes/_authenticated/receipt.$projectId'
@@ -41,6 +43,11 @@ const ProjectsRoute = ProjectsRouteImport.update({
   path: '/projects',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VoteRoute = VoteRouteImport.update({
+  id: '/vote',
+  path: '/vote',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -61,6 +68,11 @@ const AuthenticatedSubmitRoute = AuthenticatedSubmitRouteImport.update({
   id: '/submit',
   path: '/submit',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const EmbedGalleryRoute = EmbedGalleryRouteImport.update({
+  id: '/embed/gallery',
+  path: '/embed/gallery',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const OrganismsSubmissionIdRoute = OrganismsSubmissionIdRouteImport.update({
   id: '/organisms/$submissionId',
@@ -88,10 +100,12 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/projects': typeof ProjectsRouteWithChildren
+  '/vote': typeof VoteRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/judge': typeof AuthenticatedJudgeRoute
   '/observatory': typeof AuthenticatedObservatoryRoute
   '/submit': typeof AuthenticatedSubmitRoute
+  '/embed/gallery': typeof EmbedGalleryRoute
   '/organisms/$submissionId': typeof OrganismsSubmissionIdRoute
   '/projects/$id': typeof ProjectsIdRoute
   '/receipt/$projectId': typeof AuthenticatedReceiptProjectIdRoute
@@ -101,10 +115,12 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/projects': typeof ProjectsRouteWithChildren
+  '/vote': typeof VoteRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/judge': typeof AuthenticatedJudgeRoute
   '/observatory': typeof AuthenticatedObservatoryRoute
   '/submit': typeof AuthenticatedSubmitRoute
+  '/embed/gallery': typeof EmbedGalleryRoute
   '/organisms/$submissionId': typeof OrganismsSubmissionIdRoute
   '/projects/$id': typeof ProjectsIdRoute
   '/receipt/$projectId': typeof AuthenticatedReceiptProjectIdRoute
@@ -116,10 +132,12 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/projects': typeof ProjectsRouteWithChildren
+  '/vote': typeof VoteRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/judge': typeof AuthenticatedJudgeRoute
   '/_authenticated/observatory': typeof AuthenticatedObservatoryRoute
   '/_authenticated/submit': typeof AuthenticatedSubmitRoute
+  '/embed/gallery': typeof EmbedGalleryRoute
   '/organisms/$submissionId': typeof OrganismsSubmissionIdRoute
   '/projects/$id': typeof ProjectsIdRoute
   '/_authenticated/receipt/$projectId': typeof AuthenticatedReceiptProjectIdRoute
@@ -131,10 +149,12 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/projects'
+    | '/vote'
     | '/admin'
     | '/judge'
     | '/observatory'
     | '/submit'
+    | '/embed/gallery'
     | '/organisms/$submissionId'
     | '/projects/$id'
     | '/receipt/$projectId'
@@ -144,10 +164,12 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/projects'
+    | '/vote'
     | '/admin'
     | '/judge'
     | '/observatory'
     | '/submit'
+    | '/embed/gallery'
     | '/organisms/$submissionId'
     | '/projects/$id'
     | '/receipt/$projectId'
@@ -158,10 +180,12 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/projects'
+    | '/vote'
     | '/_authenticated/admin'
     | '/_authenticated/judge'
     | '/_authenticated/observatory'
     | '/_authenticated/submit'
+    | '/embed/gallery'
     | '/organisms/$submissionId'
     | '/projects/$id'
     | '/_authenticated/receipt/$projectId'
@@ -173,6 +197,8 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ProjectsRoute: typeof ProjectsRouteWithChildren
+  VoteRoute: typeof VoteRoute
+  EmbedGalleryRoute: typeof EmbedGalleryRoute
   OrganismsSubmissionIdRoute: typeof OrganismsSubmissionIdRoute
 }
 
@@ -206,6 +232,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/vote': {
+      id: '/vote'
+      path: '/vote'
+      fullPath: '/vote'
+      preLoaderRoute: typeof VoteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/admin': {
       id: '/_authenticated/admin'
       path: '/admin'
@@ -233,6 +266,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/submit'
       preLoaderRoute: typeof AuthenticatedSubmitRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/embed/gallery': {
+      id: '/embed/gallery'
+      path: '/embed/gallery'
+      fullPath: '/embed/gallery'
+      preLoaderRoute: typeof EmbedGalleryRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/organisms/$submissionId': {
       id: '/organisms/$submissionId'
@@ -303,6 +343,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ProjectsRoute: ProjectsRouteWithChildren,
+  VoteRoute: VoteRoute,
+  EmbedGalleryRoute: EmbedGalleryRoute,
   OrganismsSubmissionIdRoute: OrganismsSubmissionIdRoute,
 }
 export const routeTree = rootRouteImport

@@ -284,6 +284,27 @@ export const saveReview = createServerFn({ method: "POST" })
         assignmentId: data.assignmentId,
         submissionId: assignment.submission_id,
       });
+      const { issueParticipationRecord } = await import("./mesh/participation");
+      await issueParticipationRecord({
+        judgeId: assignment.judge_id,
+        eventId: assignment.event_id,
+        submissionId: assignment.submission_id,
+        assignmentId: data.assignmentId,
+      });
     }
     return { ok: true, status: data.submit ? "submitted" : "draft" };
+  });
+
+/** Signed participation records for the caller's judge identities. */
+export const myParticipation = createServerFn({ method: "GET" })
+  .middleware([requireAuth])
+  .handler(async ({ context }) => {
+    const { rows } = await meshPool().query(
+      `select r.id, r.event_id, r.submission_id, r.submitted_at, s.title from public.participation_records r
+       join public.judges j on j.id = r.judge_id
+       join public.submissions s on s.id = r.submission_id
+       where j.user_id = $1 order by r.submitted_at desc`,
+      [context.userId],
+    );
+    return rows as { id: string; event_id: string; submission_id: string; submitted_at: string; title: string }[];
   });

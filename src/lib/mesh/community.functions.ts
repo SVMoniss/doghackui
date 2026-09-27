@@ -84,6 +84,18 @@ export function emailVoterKey(email: string): string {
   return `email:${createHash("sha256").update(email.trim().toLowerCase(), "utf8").digest("hex").slice(0, 32)}`;
 }
 
+/** Deterministic per-voter shuffle: kills position bias without stored state. */
+export function shuffleForVoter(ids: string[], seedKey: string, eventId: string): string[] {
+  return ids
+    .slice()
+    .sort((a, b) =>
+      createHash("sha256")
+        .update(`${seedKey}:${eventId}:${a}`, "utf8")
+        .digest("hex")
+        .localeCompare(createHash("sha256").update(`${seedKey}:${eventId}:${b}`, "utf8").digest("hex")),
+    );
+}
+
 /**
  * Ballot for the caller: submitted projects in voter-seeded random order
  * (kills position bias without storing per-voter state), plus the caller's
@@ -101,17 +113,11 @@ export const ballot = createServerFn({ method: "GET" })
        where s.event_id = $1 and s.status = 'submitted'`,
       [data.eventId],
     );
-    const order = (rows as { id: string }[])
-      .slice()
-      .sort((a, b) =>
-        createHash("sha256")
-          .update(`${context.userId}:${data.eventId}:${a.id}`, "utf8")
-          .digest("hex")
-          .localeCompare(
-            createHash("sha256").update(`${context.userId}:${data.eventId}:${b.id}`, "utf8").digest("hex"),
-          ),
-      );
-    const orderedIds = order.map((r) => r.id);
+    const orderedIds = shuffleForVoter(
+      (rows as { id: string }[]).map((r) => r.id),
+      context.userId,
+      data.eventId,
+    );
     const byId = new Map((rows as Record<string, unknown>[]).map((r) => [r["id"] as string, r]));
     const { rows: mine } = await pool.query(
       "select submission_id, votes from public.votes where event_id = $1 and voter_key = $2",
@@ -271,4 +277,132 @@ export const hideComment = createServerFn({ method: "POST" })
       entityId: data.commentId,
     });
     return { ok: true };
+  });
+
+async function validToken(eventId: string, token: string): Promise<boolean> {
+  const { rows } = await meshPool().query(
+    "select 1 from public.ballot_tokens where event_id = $1 and token = $2 and revoked = false",
+    [eventId, token],
+  );
+  return rows.length > 0;
+}
+
+const tokenKey = (token: string) => `token:${token}`;
+
+/** Organizer mints anonymous ballot tokens (shown once, bearer by design). */
+export const createBallotTokens = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ eventId: uuid, count: z.number().int().min(1).max(100).default(10), label: z.string().trim().max(80).default("") }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertOrganizer(context.userId);
+    const { randomBytes } = await import("node:crypto");
+    const pool = meshPool();
+    const tokens: string[] = [];
+    for (let i = 0; i < data.count; i += 1) {
+      const token = `blt_${randomBytes(16).toString("hex")}`;
+      await pool.query("insert into public.ballot_tokens (token, event_id, label) values ($1, $2, $3)", [
+        token,
+        data.eventId,
+        data.label,
+      ]);
+      tokens.push(token);
+    }
+    await logAudit({
+      eventId: data.eventId,
+      actor: context.userId,
+      action: "ballot.tokens_created",
+      entity: "events",
+      entityId: data.eventId,
+      detail: { count: tokens.length },
+    });
+    return { tokens };
+  });
+
+export const listBallotTokens = createServerFn({ method: "GET" })
+  .middleware([requireAuth])
+  .inputValidator((input: { eventId: string }) => z.object({ eventId: uuid }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertOrganizer(context.userId);
+    const { rows } = await meshPool().query(
+      `select t.token, t.label, t.revoked, t.created_at,
+              (select count(*) from public.votes v where v.event_id = t.event_id and v.voter_key = ('token:' || t.token)) as ballots
+       from public.ballot_tokens t where t.event_id = $1 order by t.created_at desc limit 100`,
+      [data.eventId],
+    );
+    return rows as { token: string; label: string; revoked: boolean; created_at: string; ballots: string }[];
+  });
+
+export const revokeBallotToken = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) => z.object({ token: z.string().min(8).max(200) }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertOrganizer(context.userId);
+    await meshPool().query("update public.ballot_tokens set revoked = true where token = $1", [data.token]);
+    return { ok: true };
+  });
+
+/** Anonymous ballot: same projects, token-seeded order, no session needed. */
+export const tokenBallot = createServerFn({ method: "GET" })
+  .inputValidator((input: unknown) => z.object({ eventId: uuid, token: z.string().min(8).max(200) }).parse(input))
+  .handler(async ({ data }) => {
+    const config = await getVotingConfig(data.eventId);
+    if (!(await validToken(data.eventId, data.token))) throw new Error("Invalid or revoked ballot token.");
+    const pool = meshPool();
+    const { rows } = await pool.query(
+      `select s.id, s.title, s.tagline, s.team_name from public.submissions s
+       where s.event_id = $1 and s.status = 'submitted'`,
+      [data.eventId],
+    );
+    const orderedIds = shuffleForVoter(
+      (rows as { id: string }[]).map((r) => r.id),
+      tokenKey(data.token),
+      data.eventId,
+    );
+    const byId = new Map((rows as Record<string, unknown>[]).map((r) => [r["id"] as string, r]));
+    const { rows: mine } = await pool.query(
+      "select submission_id, votes from public.votes where event_id = $1 and voter_key = $2",
+      [data.eventId, tokenKey(data.token)],
+    );
+    return {
+      config,
+      projects: orderedIds.map((id) => byId.get(id)),
+      myVotes: Object.fromEntries(
+        (mine as { submission_id: string; votes: number }[]).map((v) => [v.submission_id, v.votes]),
+      ),
+    };
+  });
+
+/** Anonymous vote through a ballot token. Same caps as authenticated votes. */
+export const castTokenVote = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z.object({ eventId: uuid, token: z.string().min(8).max(200), submissionId: uuid, votes: z.number().int().min(1).max(5).default(1) }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const config = await getVotingConfig(data.eventId);
+    if (config.mode === "off" || !config.open) throw new Error("Voting is not open.");
+    if (!(await validToken(data.eventId, data.token))) throw new Error("Invalid or revoked ballot token.");
+    const voterKey = tokenKey(data.token);
+    const pool = meshPool();
+    const { rows: subRows } = await pool.query(
+      "select id from public.submissions where id = $1 and event_id = $2 and status = 'submitted'",
+      [data.submissionId, data.eventId],
+    );
+    if (subRows.length === 0) throw new Error("Project not found or not submitted.");
+    const { rows: recent } = await pool.query(
+      "select count(*) as count from public.votes where event_id = $1 and voter_key = $2 and created_at > now() - interval '1 hour'",
+      [data.eventId, voterKey],
+    );
+    if (Number((recent[0] as { count: string }).count) >= 30) {
+      throw new Error("Rate limit: too many votes this hour.");
+    }
+    const votes = config.mode === "quadratic" ? data.votes : 1;
+    await pool.query(
+      `insert into public.votes (event_id, submission_id, voter_key, votes, updated_at)
+       values ($1, $2, $3, $4, now())
+       on conflict (event_id, submission_id, voter_key) do update set votes = excluded.votes, updated_at = now()`,
+      [data.eventId, data.submissionId, voterKey, votes],
+    );
+    return { ok: true, votes };
   });

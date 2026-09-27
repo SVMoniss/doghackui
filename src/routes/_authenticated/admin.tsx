@@ -34,7 +34,14 @@ import {
 } from "@/lib/organizer.functions";
 import { claimFirstOrganizer } from "@/lib/participant.functions";
 import { pairwiseRanking } from "@/lib/mesh/pairwise.functions";
-import { setVoting, standings, votingConfig } from "@/lib/mesh/community.functions";
+import {
+  createBallotTokens,
+  listBallotTokens,
+  revokeBallotToken,
+  setVoting,
+  standings,
+  votingConfig,
+} from "@/lib/mesh/community.functions";
 import { createWebhook, deleteWebhook, listWebhooks } from "@/lib/organizer.functions";
 import { EventsCard, PrizesCard, QuestionsCard } from "@/components/EventsCard";
 
@@ -610,10 +617,17 @@ function Voting({ eventId }: { eventId: string }) {
   const fetchConfig = useServerFn(votingConfig);
   const save = useServerFn(setVoting);
   const fetchStandings = useServerFn(standings);
+  const fetchTokens = useServerFn(listBallotTokens);
+  const mint = useServerFn(createBallotTokens);
+  const revoke = useServerFn(revokeBallotToken);
   const config = useQuery({ queryKey: ["voting", eventId], queryFn: () => fetchConfig({ data: { eventId } }) });
   const tally = useQuery({
     queryKey: ["standings", eventId],
     queryFn: () => fetchStandings({ data: { eventId } }),
+  });
+  const tokens = useQuery({
+    queryKey: ["ballot-tokens", eventId],
+    queryFn: () => fetchTokens({ data: { eventId } }),
   });
   const [mode, setMode] = useState("off");
   const [open, setOpen] = useState(false);
@@ -640,6 +654,26 @@ function Voting({ eventId }: { eventId: string }) {
       queryClient.invalidateQueries({ queryKey: ["voting"] });
       queryClient.invalidateQueries({ queryKey: ["standings"] });
       toast.success("Voting settings saved.");
+    },
+    onError: (error) => toast.error((error as Error).message),
+  });
+
+  const [tokenCount, setTokenCount] = useState("10");
+  const [freshTokens, setFreshTokens] = useState<string[]>([]);
+  const mintMutation = useMutation({
+    mutationFn: () => mint({ data: { eventId, count: Math.min(100, Math.max(1, Number(tokenCount) || 10)) } }),
+    onSuccess: (result) => {
+      setFreshTokens(result.tokens);
+      queryClient.invalidateQueries({ queryKey: ["ballot-tokens"] });
+      toast.success(`${result.tokens.length} ballot links created — copy them now.`);
+    },
+    onError: (error) => toast.error((error as Error).message),
+  });
+  const revokeMutation = useMutation({
+    mutationFn: (token: string) => revoke({ data: { token } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ballot-tokens"] });
+      toast.success("Ballot link revoked.");
     },
     onError: (error) => toast.error((error as Error).message),
   });
@@ -680,8 +714,7 @@ function Voting({ eventId }: { eventId: string }) {
           </Button>
         </div>
         <div>
-          <h3 className="mb-2 text-sm font-medium">Tally (organizers see it before publish)</h3>
-          {!tally.data || !tally.data.published || (tally.data.standings ?? []).length === 0 ? (
+          <h3 className="mb-2 text-sm font-medium">Tally (organizers see it before publish)</h3>          {!tally.data || !tally.data.published || (tally.data.standings ?? []).length === 0 ? (
             <p className="font-mono text-xs text-muted-foreground">
               {(tally.data?.standings ?? []).length === 0 ? "No votes counted yet." : "Loading tally…"}
             </p>
@@ -697,6 +730,51 @@ function Voting({ eventId }: { eventId: string }) {
               ))}
             </ul>
           )}
+        </div>
+        <div>
+          <h3 className="mb-2 text-sm font-medium">Anonymous ballot links</h3>
+          <p className="mb-2 text-xs text-muted-foreground">
+            Bearer links: whoever opens one may vote with no account. Distribute privately; revoke any time.
+          </p>
+          {freshTokens.length > 0 && (
+            <ul className="mb-2 space-y-1 rounded-md bg-muted p-2 font-mono text-xs">
+              {freshTokens.map((token) => (
+                <li key={token} className="break-all">
+                  /vote?t={token}
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="w-24 space-y-2">
+              <Label htmlFor="token-count">Count</Label>
+              <Input
+                id="token-count"
+                type="number"
+                min={1}
+                max={100}
+                value={tokenCount}
+                onChange={(event) => setTokenCount(event.target.value)}
+              />
+            </div>
+            <Button size="sm" disabled={mintMutation.isPending} onClick={() => mintMutation.mutate()}>
+              Mint ballot links
+            </Button>
+          </div>
+          <ul className="mt-2 space-y-1 text-xs">
+            {(tokens.data ?? []).slice(0, 10).map((t) => (
+              <li key={t.token} className="flex flex-wrap items-center gap-2 font-mono">
+                <span className={t.revoked ? "text-muted-foreground line-through" : ""}>
+                  {t.token.slice(0, 20)}… · {t.ballots} ballots{t.revoked ? " · revoked" : ""}
+                </span>
+                {!t.revoked && (
+                  <Button size="sm" variant="ghost" onClick={() => revokeMutation.mutate(t.token)}>
+                    Revoke
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
         </div>
       </CardContent>
     </Card>
